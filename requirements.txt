@@ -3,3 +3,4 @@ PyPDF2
 Werkzeug
 python-dotenv
 supabase
+gunicorn
