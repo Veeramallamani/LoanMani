@@ -1214,12 +1214,15 @@
           const botDiv = document.createElement('div');
           botDiv.className = 'chat-message assistant';
 
-          // Safe Markdown Parsing with fallback
           let htmlContent = response.text;
           if (typeof marked !== 'undefined' && marked && typeof marked.parse === 'function') {
             htmlContent = marked.parse(response.text);
           } else {
             htmlContent = '<p>' + escapeHtml(response.text).replace(/\n/g, '<br>') + '</p>';
+          }
+
+          if (response.warning) {
+            htmlContent = '<div style="color: var(--warning-color); font-size: 0.85rem; margin-bottom: 8px; font-weight: bold;">' + escapeHtml(response.warning) + '</div>' + htmlContent;
           }
 
           htmlContent = checkAndInjectBorrowerForm(htmlContent, false);
