@@ -18,6 +18,8 @@ app = Flask(__name__, static_folder='.', static_url_path='')
 # Load Groq API Key and default model from environment variables (.env)
 DEFAULT_GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 DEFAULT_MODEL = os.environ.get("GROQ_MODEL", "llama-3.1-8b-instant")
+if DEFAULT_MODEL in ["llama-3.3-70b-versatile", "llama3-70b-8192"]:
+    DEFAULT_MODEL = "llama-3.1-8b-instant"
 
 # Supabase configuration
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
@@ -191,6 +193,8 @@ def test_groq_connection():
     data = request.get_json() or {}
     api_key = data.get('apiKey', '').strip() or DEFAULT_GROQ_API_KEY
     model = data.get('model', '').strip() or DEFAULT_MODEL
+    if model in ["llama-3.3-70b-versatile", "llama3-70b-8192"]:
+        model = "llama-3.1-8b-instant"
 
     if not api_key:
         return jsonify({"success": False, "message": "No Groq API Key provided."}), 400
@@ -238,6 +242,8 @@ def chat_endpoint():
     user_query = data.get('query', '').strip()
     api_key = data.get('apiKey', '').strip() or DEFAULT_GROQ_API_KEY
     model = data.get('model', '').strip() or DEFAULT_MODEL
+    if model in ["llama-3.3-70b-versatile", "llama3-70b-8192"]:
+        model = "llama-3.1-8b-instant"
     chat_history = data.get('chatHistory', [])
     language = data.get('language', 'English').strip()
 
