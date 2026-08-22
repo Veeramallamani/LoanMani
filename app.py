@@ -17,7 +17,7 @@ app = Flask(__name__, static_folder='.', static_url_path='')
 
 # Load Groq API Key and default model from environment variables (.env)
 DEFAULT_GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
-DEFAULT_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
+DEFAULT_MODEL = os.environ.get("GROQ_MODEL", "llama3-70b-8192")
 
 # Supabase configuration
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
@@ -361,7 +361,7 @@ Document text:
         """
         
         payload = {
-            "model": "llama-3.3-70b-versatile",
+            "model": "llama3-70b-8192",
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.1,
             "max_tokens": 500,

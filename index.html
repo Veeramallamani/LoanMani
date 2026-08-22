@@ -568,7 +568,7 @@
           <label class="toggle-switch-label">
             <input type="checkbox" id="groq-enable-toggle" checked>
             <span class="toggle-slider"></span>
-            <span>Use Groq Cloud LLM (llama-3.3-70b-versatile)</span>
+            <span>Use Groq Cloud LLM (llama3-70b-8192)</span>
           </label>
           <p class="form-help">When enabled, responses use Groq LLM with dataset context. When disabled, the local analytics engine is used.</p>
         </div>
@@ -585,7 +585,7 @@
         <div class="form-group">
           <label for="groq-model-select">LLM Model</label>
           <select id="groq-model-select" class="form-select">
-            <option value="llama-3.3-70b-versatile" selected>llama-3.3-70b-versatile (Recommended - High Performance)</option>
+            <option value="llama3-70b-8192" selected>llama3-70b-8192 (Recommended - High Performance)</option>
             <option value="llama-3.1-8b-instant">llama-3.1-8b-instant (Fastest Speed)</option>
             <option value="mixtral-8x7b-32768">mixtral-8x7b-32768 (High Context)</option>
             <option value="gemma2-9b-it">gemma2-9b-it (Google Gemma 2)</option>
@@ -1095,7 +1095,7 @@
           }
         }
         if (groqBadgeText) groqBadgeText.textContent = (bot.useLLM) ? 'Groq Active' : 'Local Mode';
-        if (groqModelTag) groqModelTag.textContent = bot.model.split('/')[0].replace('llama-3.3-70b-versatile', 'llama-3.3-70b').replace('llama-3.1-8b-instant', 'llama-3.1-8b');
+        if (groqModelTag) groqModelTag.textContent = bot.model.split('/')[0].replace('llama3-70b-8192', 'llama3-70b').replace('llama-3.1-8b-instant', 'llama-3.1-8b');
       }
 
       apiKeyInput.value = bot.apiKey;
