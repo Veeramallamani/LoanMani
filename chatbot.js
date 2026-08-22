@@ -9,7 +9,12 @@ class LoanChatbot {
   constructor() {
     this.useLLM = localStorage.getItem('groq_use_llm') !== 'false';
     this.apiKey = localStorage.getItem('groq_api_key') || '';
-    this.model = localStorage.getItem('groq_model') || 'llama-3.1-8b-instant';
+    let storedModel = localStorage.getItem('groq_model');
+    if (storedModel === 'llama-3.3-70b-versatile' || storedModel === 'llama3-70b-8192') {
+      localStorage.removeItem('groq_model');
+      storedModel = null;
+    }
+    this.model = storedModel || 'llama-3.1-8b-instant';
     this.language = localStorage.getItem('loan_chat_language') || 'English';
     this.chatHistory = [];
 
