@@ -1,15 +1,15 @@
 /**
  * LoanChatbot - Intelligent Loan Default Analytics & Prediction AI Engine
- * Supports Groq LLM integration (via Flask backend or direct API)
+ * Supports OpenRouter LLM integration (via Flask backend or direct API)
  * with an offline Data-Grounded Local Analytics & Machine Learning Engine.
  * Enforces Strict Domain Scope & Guardrails to prevent off-topic general chat.
  */
 
 class LoanChatbot {
   constructor() {
-    this.useLLM = localStorage.getItem('groq_use_llm') !== 'false';
-    this.apiKey = localStorage.getItem('groq_api_key') || '';
-    this.model = localStorage.getItem('groq_model') || 'gpt-oss-120b';
+    this.useLLM = localStorage.getItem('openrouter_use_llm') !== 'false';
+    this.apiKey = localStorage.getItem('openrouter_api_key') || '';
+    this.model = localStorage.getItem('openrouter_model') || 'z-ai/glm-5.2:free';
     this.language = localStorage.getItem('loan_chat_language') || 'English';
     this.chatHistory = [];
 
@@ -30,7 +30,7 @@ class LoanChatbot {
         if (!this.apiKey && data.default_api_key) {
           this.apiKey = data.default_api_key;
         }
-        if (data.default_model && !localStorage.getItem('groq_model')) {
+        if (data.default_model && !localStorage.getItem('openrouter_model')) {
           this.model = data.default_model;
         }
       }
@@ -41,16 +41,16 @@ class LoanChatbot {
 
   updateSettings(apiKey, model, useLLM, language) {
     this.apiKey = apiKey.trim();
-    this.model = model.trim() || 'gpt-oss-120b';
+    this.model = model.trim() || 'z-ai/glm-5.2:free';
     this.useLLM = Boolean(useLLM);
     if (language) {
       this.language = language;
       localStorage.setItem('loan_chat_language', this.language);
     }
 
-    localStorage.setItem('groq_api_key', this.apiKey);
-    localStorage.setItem('groq_model', this.model);
-    localStorage.setItem('groq_use_llm', this.useLLM);
+    localStorage.setItem('openrouter_api_key', this.apiKey);
+    localStorage.setItem('openrouter_model', this.model);
+    localStorage.setItem('openrouter_use_llm', this.useLLM);
   }
 
   async testConnection(apiKey, model) {
@@ -58,12 +58,12 @@ class LoanChatbot {
     const targetModel = model || this.model;
 
     if (!targetKey) {
-      console.log('No local Groq API Key provided, relying on backend default.');
+      console.log('No local OpenRouter API Key provided, relying on backend default.');
     }
 
     try {
       // Try backend endpoint first
-      const res = await fetch('/api/test-groq', {
+      const res = await fetch('/api/test-openrouter', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ apiKey: targetKey, model: targetModel })
@@ -77,16 +77,16 @@ class LoanChatbot {
       const msg = errData.message || `HTTP ${res.status}`;
 
       // Fallback to direct client ping if backend API route is not available
-      return await this.testGroqDirect(targetKey, targetModel);
+      return await this.testOpenRouterDirect(targetKey, targetModel);
     } catch (e) {
-      return await this.testGroqDirect(targetKey, targetModel);
+      return await this.testOpenRouterDirect(targetKey, targetModel);
     }
   }
 
-  async testGroqDirect(apiKey, model) {
+  async testOpenRouterDirect(apiKey, model) {
     const startTime = Date.now();
     try {
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
@@ -104,7 +104,7 @@ class LoanChatbot {
         return {
           success: true,
           latencyMs: elapsed,
-          message: `Direct Groq API connection verified (${model}, ${elapsed}ms)`
+          message: `Direct OpenRouter API connection verified (${model}, ${elapsed}ms)`
         };
       }
       const data = await res.json();
@@ -144,9 +144,9 @@ class LoanChatbot {
           return llmResult;
         }
       } catch (err) {
-        console.warn('Groq LLM call failed, falling back to Local Rule Engine:', err);
+        console.warn('OpenRouter LLM call failed, falling back to Local Rule Engine:', err);
         const fallback = this.processLocalQuery(query);
-        fallback.warning = `Groq LLM Notice: ${err.message}. Showing verified results from 2026 Local Underwriting Engine.`;
+        fallback.warning = `OpenRouter LLM Notice: ${err.message}. Showing verified results from 2026 Local Underwriting Engine.`;
         return fallback;
       }
     }
@@ -174,7 +174,7 @@ class LoanChatbot {
         const data = await backendRes.json();
         return {
           text: data.text,
-          source: 'groq',
+          source: 'openrouter',
           model: data.model || this.model,
           language: this.language,
           quickActions: this.generateContextualQuickActions(userQuery)
@@ -190,10 +190,10 @@ class LoanChatbot {
       if (!this.apiKey) {
         throw e;
       }
-      console.log('Backend API route unavailable, trying direct Groq endpoint...', e);
+      console.log('Backend API route unavailable, trying direct OpenRouter endpoint...', e);
     }
 
-    // 2. Direct Groq API call as fallback
+    // 2. Direct OpenRouter API call as fallback
     let systemPrompt = "";
     const langLower = (this.language || 'English').toLowerCase();
     
@@ -302,7 +302,7 @@ class LoanChatbot {
     }
     messages.push({ role: 'user', content: userQuery });
 
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${this.apiKey}`,
@@ -318,14 +318,14 @@ class LoanChatbot {
 
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.error?.message || `Groq HTTP ${res.status}`);
+      throw new Error(errData.error?.message || `OpenRouter HTTP ${res.status}`);
     }
 
     const data = await res.json();
     const replyText = data.choices?.[0]?.message?.content || 'No response generated.';
     return {
       text: replyText,
-      source: 'groq',
+      source: 'openrouter',
       model: this.model,
       quickActions: this.generateContextualQuickActions(userQuery)
     };

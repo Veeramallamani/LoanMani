@@ -15,9 +15,9 @@ except ImportError:
 
 app = Flask(__name__, static_folder='.', static_url_path='')
 
-# Load Groq API Key and default model from environment variables (.env)
-DEFAULT_GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
-DEFAULT_MODEL = os.environ.get("GROQ_MODEL", "gpt-oss-120b")
+# Load OpenRouter API Key and default model from environment variables (.env)
+DEFAULT_OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
+DEFAULT_MODEL = os.environ.get("OPENROUTER_MODEL", "z-ai/glm-5.2:free")
 
 # Supabase configuration
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
@@ -181,19 +181,19 @@ def health_check():
     return jsonify({
         "status": "online",
         "backend": "Python / Flask",
-        "groq_configured": bool(DEFAULT_GROQ_API_KEY),
-        "default_api_key": DEFAULT_GROQ_API_KEY,
+        "openrouter_configured": bool(DEFAULT_OPENROUTER_API_KEY),
+        "default_api_key": DEFAULT_OPENROUTER_API_KEY,
         "default_model": DEFAULT_MODEL
     })
 
-@app.route('/api/test-groq', methods=['POST'])
-def test_groq_connection():
+@app.route('/api/test-openrouter', methods=['POST'])
+def test_openrouter_connection():
     data = request.get_json() or {}
-    api_key = data.get('apiKey', '').strip() or DEFAULT_GROQ_API_KEY
+    api_key = data.get('apiKey', '').strip() or DEFAULT_OPENROUTER_API_KEY
     model = data.get('model', '').strip() or DEFAULT_MODEL
 
     if not api_key:
-        return jsonify({"success": False, "message": "No Groq API Key provided."}), 400
+        return jsonify({"success": False, "message": "No OpenRouter API Key provided."}), 400
 
     start_time = time.time()
     payload = {
@@ -203,7 +203,7 @@ def test_groq_connection():
     }
 
     req = urllib.request.Request(
-        'https://api.groq.com/openai/v1/chat/completions',
+        'https://openrouter.ai/api/v1/chat/completions',
         headers={
             'Authorization': f'Bearer {api_key}',
             'Content-Type': 'application/json',
@@ -219,7 +219,7 @@ def test_groq_connection():
             return jsonify({
                 "success": True,
                 "latencyMs": latency,
-                "message": f"Groq API connection verified via backend ({model}, {latency}ms)"
+                "message": f"OpenRouter API connection verified via backend ({model}, {latency}ms)"
             })
     except urllib.error.HTTPError as e:
         err_body = e.read().decode('utf-8', errors='ignore')
@@ -228,7 +228,7 @@ def test_groq_connection():
             msg = err_json.get('error', {}).get('message', f"HTTP {e.code}")
         except Exception:
             msg = f"HTTP {e.code} {e.reason}"
-        return jsonify({"success": False, "message": f"Groq API Error: {msg}"}), 400
+        return jsonify({"success": False, "message": f"OpenRouter API Error: {msg}"}), 400
     except Exception as e:
         return jsonify({"success": False, "message": f"Network Error: {str(e)}"}), 500
 
@@ -236,7 +236,7 @@ def test_groq_connection():
 def chat_endpoint():
     data = request.get_json() or {}
     user_query = data.get('query', '').strip()
-    api_key = data.get('apiKey', '').strip() or DEFAULT_GROQ_API_KEY
+    api_key = data.get('apiKey', '').strip() or DEFAULT_OPENROUTER_API_KEY
     model = data.get('model', '').strip() or DEFAULT_MODEL
     chat_history = data.get('chatHistory', [])
     language = data.get('language', 'English').strip()
@@ -245,7 +245,7 @@ def chat_endpoint():
         return jsonify({"error": "Query parameter cannot be empty."}), 400
 
     if not api_key:
-        return jsonify({"error": "No Groq API key configured on backend or provided in request."}), 400
+        return jsonify({"error": "No OpenRouter API key configured on backend or provided in request."}), 400
 
     # Build prompt messages payload with dedicated single-language system prompt
     system_content = get_system_prompt_for_language(language)
@@ -267,7 +267,7 @@ def chat_endpoint():
     }
 
     req = urllib.request.Request(
-        'https://api.groq.com/openai/v1/chat/completions',
+        'https://openrouter.ai/api/v1/chat/completions',
         headers={
             'Authorization': f'Bearer {api_key}',
             'Content-Type': 'application/json',
@@ -299,7 +299,7 @@ def chat_endpoint():
 
             return jsonify({
                 "text": reply_text,
-                "source": "groq",
+                "source": "openrouter",
                 "backend": "Python / Flask",
                 "model": model,
                 "usage": usage
@@ -311,7 +311,7 @@ def chat_endpoint():
             msg = err_json.get('error', {}).get('message', f"HTTP {e.code}")
         except Exception:
             msg = f"HTTP {e.code} {e.reason}"
-        return jsonify({"error": f"Groq API Error: {msg}"}), 400
+        return jsonify({"error": f"OpenRouter API Error: {msg}"}), 400
     except Exception as e:
         return jsonify({"error": f"Server Error: {str(e)}"}), 500
 
@@ -321,10 +321,10 @@ def parse_document():
         return jsonify({"error": "No document uploaded"}), 400
     
     file = request.files['document']
-    api_key = request.form.get('apiKey', '').strip() or DEFAULT_GROQ_API_KEY
+    api_key = request.form.get('apiKey', '').strip() or DEFAULT_OPENROUTER_API_KEY
     
     if not api_key:
-        return jsonify({"error": "No Groq API key configured"}), 400
+        return jsonify({"error": "No OpenRouter API key configured"}), 400
 
     filename = secure_filename(file.filename or "")
     text_content = ""
@@ -361,7 +361,7 @@ Document text:
         """
         
         payload = {
-            "model": "gpt-oss-120b",
+            "model": "z-ai/glm-5.2:free",
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.1,
             "max_tokens": 500,
@@ -369,7 +369,7 @@ Document text:
         }
 
         req = urllib.request.Request(
-            'https://api.groq.com/openai/v1/chat/completions',
+            'https://openrouter.ai/api/v1/chat/completions',
             headers={
                 'Authorization': f'Bearer {api_key}',
                 'Content-Type': 'application/json'
