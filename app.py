@@ -17,7 +17,7 @@ app = Flask(__name__, static_folder='.', static_url_path='')
 
 # Load Groq API Key and default model from environment variables (.env)
 DEFAULT_GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
-DEFAULT_MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
+DEFAULT_MODEL = os.environ.get("GROQ_MODEL", "")
 
 # Supabase configuration
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
@@ -322,6 +322,7 @@ def parse_document():
     
     file = request.files['document']
     api_key = request.form.get('apiKey', '').strip() or DEFAULT_GROQ_API_KEY
+    model = request.form.get('model', '').strip() or DEFAULT_MODEL
     
     if not api_key:
         return jsonify({"error": "No Groq API key configured"}), 400
@@ -361,7 +362,7 @@ Document text:
         """
         
         payload = {
-            "model": "openai/gpt-oss-120b",
+            "model": model,
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.1,
             "max_tokens": 500,

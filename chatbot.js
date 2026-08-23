@@ -9,7 +9,7 @@ class LoanChatbot {
   constructor() {
     this.useLLM = localStorage.getItem('groq_use_llm') !== 'false';
     this.apiKey = localStorage.getItem('groq_api_key') || '';
-    this.model = localStorage.getItem('groq_model') || 'openai/gpt-oss-120b';
+    this.model = localStorage.getItem('groq_model') || '';
     this.language = localStorage.getItem('loan_chat_language') || 'English';
     this.chatHistory = [];
 
@@ -41,7 +41,7 @@ class LoanChatbot {
 
   updateSettings(apiKey, model, useLLM, language) {
     this.apiKey = apiKey.trim();
-    this.model = model.trim() || 'openai/gpt-oss-120b';
+    this.model = model.trim() || '';
     this.useLLM = Boolean(useLLM);
     if (language) {
       this.language = language;
