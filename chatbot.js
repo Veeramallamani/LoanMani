@@ -315,16 +315,16 @@ class LoanChatbot {
       })
     });
 
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.error?.message || `OpenRouter HTTP ${res.status}`);
+    if (!groqRes.ok) {
+      const errData = await groqRes.json().catch(() => ({}));
+      throw new Error(errData.error?.message || `Groq HTTP ${groqRes.status}`);
     }
 
-    const data = await res.json();
+    const data = await groqRes.json();
     const replyText = data.choices?.[0]?.message?.content || 'No response generated.';
     return {
       text: replyText,
-      source: 'openrouter',
+      source: 'groq',
       model: this.model,
       quickActions: this.generateContextualQuickActions(userQuery)
     };
