@@ -17,7 +17,7 @@ app = Flask(__name__, static_folder='.', static_url_path='')
 
 # Load OpenRouter API Key and default model from environment variables (.env)
 DEFAULT_OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
-DEFAULT_MODEL = os.environ.get("OPENROUTER_MODEL", "z-ai/glm-5.2:free")
+DEFAULT_MODEL = os.environ.get("OPENROUTER_MODEL", "qwen-3.6-27b")
 
 # Supabase configuration
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
@@ -361,7 +361,7 @@ Document text:
         """
         
         payload = {
-            "model": "z-ai/glm-5.2:free",
+            "model": "qwen-3.6-27b",
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.1,
             "max_tokens": 500,

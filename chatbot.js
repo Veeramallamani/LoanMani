@@ -9,7 +9,7 @@ class LoanChatbot {
   constructor() {
     this.useLLM = localStorage.getItem('openrouter_use_llm') !== 'false';
     this.apiKey = localStorage.getItem('openrouter_api_key') || '';
-    this.model = localStorage.getItem('openrouter_model') || 'z-ai/glm-5.2:free';
+    this.model = localStorage.getItem('openrouter_model') || 'qwen-3.6-27b';
     this.language = localStorage.getItem('loan_chat_language') || 'English';
     this.chatHistory = [];
 
@@ -41,7 +41,7 @@ class LoanChatbot {
 
   updateSettings(apiKey, model, useLLM, language) {
     this.apiKey = apiKey.trim();
-    this.model = model.trim() || 'z-ai/glm-5.2:free';
+    this.model = model.trim() || 'qwen-3.6-27b';
     this.useLLM = Boolean(useLLM);
     if (language) {
       this.language = language;
