@@ -1298,13 +1298,28 @@
                   <option value="no">No</option>
                 </select>
               </div>
-              <button type="button" class="btn-primary borrower-submit-btn" onclick="submitBorrowerForm(this)" ${disabledAttr}>${btnText}</button>
+              <div class="borrower-form-actions" style="display: flex; gap: 10px;">
+                <button type="button" class="btn-primary borrower-submit-btn" onclick="submitBorrowerForm(this)" ${disabledAttr}>${btnText}</button>
+                <button type="button" class="btn-secondary borrower-edit-btn" onclick="editBorrowerForm(this)" style="display: ${isHistory ? 'inline-block' : 'none'};">Edit</button>
+              </div>
             </div>
           `;
           return htmlContent + formHtml;
         }
         return htmlContent;
       }
+      
+      window.editBorrowerForm = function(btn) {
+        const container = btn.closest('.borrower-form-container');
+        const inputs = container.querySelectorAll('.borrower-input');
+        inputs.forEach(input => input.disabled = false);
+        
+        const submitBtn = container.querySelector('.borrower-submit-btn');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Details';
+        
+        btn.style.display = 'none';
+      };
 
       window.submitBorrowerForm = function(btn) {
         const container = btn.closest('.borrower-form-container');
@@ -1327,6 +1342,11 @@
         inputs.forEach(input => input.disabled = true);
         btn.disabled = true;
         btn.textContent = 'Submitted';
+        
+        const editBtn = container.querySelector('.borrower-edit-btn');
+        if (editBtn) {
+          editBtn.style.display = 'inline-block';
+        }
         
         if (window.sendChatMessage) {
           window.sendChatMessage(formattedMsg);
