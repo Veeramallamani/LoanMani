@@ -7,9 +7,9 @@
 
 class LoanChatbot {
   constructor() {
-    this.useLLM = localStorage.getItem('groq_use_llm') !== 'false';
-    this.apiKey = localStorage.getItem('groq_api_key') || '';
-    this.model = localStorage.getItem('groq_model') || '';
+    this.useLLM = localStorage.getItem('openrouter_use_llm') !== 'false';
+    this.apiKey = localStorage.getItem('openrouter_api_key') || '';
+    this.model = localStorage.getItem('openrouter_model') || '';
     this.language = localStorage.getItem('loan_chat_language') || 'English';
     this.chatHistory = [];
 
@@ -27,11 +27,11 @@ class LoanChatbot {
       const res = await fetch('/api/health');
       if (res.ok) {
         const data = await res.json();
-        if (data.default_api_key && !localStorage.getItem('groq_api_key')) {
+        if (data.default_api_key && !localStorage.getItem('openrouter_api_key')) {
           this.apiKey = data.default_api_key;
         }
-        if (data.default_model && !localStorage.getItem('groq_model')) {
-          this.model = data.default_model;
+        if (data.default_models && data.default_models.length > 0 && !localStorage.getItem('openrouter_model')) {
+          this.model = data.default_models.join(',');
         }
       }
     } catch (e) {
@@ -47,9 +47,9 @@ class LoanChatbot {
       this.language = language;
     }
     
-    localStorage.setItem('groq_api_key', this.apiKey);
-    localStorage.setItem('groq_model', this.model);
-    localStorage.setItem('groq_use_llm', this.useLLM);
+    localStorage.setItem('openrouter_api_key', this.apiKey);
+    localStorage.setItem('openrouter_model', this.model);
+    localStorage.setItem('openrouter_use_llm', this.useLLM);
   }
 
   async testConnection(apiKey, model) {
@@ -62,7 +62,7 @@ class LoanChatbot {
 
     try {
       // Try backend endpoint first
-      const res = await fetch('/api/test-groq', {
+      const res = await fetch('/api/test-openrouter', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ apiKey: targetKey, model: targetModel })
@@ -83,40 +83,50 @@ class LoanChatbot {
   }
 
   async testOpenRouterDirect(apiKey, model) {
-    const startTime = Date.now();
-    try {
-      const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: model,
-          messages: [{ role: 'user', content: 'Ping test' }],
-          max_tokens: 5
-        })
-      });
-
-      const elapsed = Date.now() - startTime;
-      if (groqRes.ok) {
-        return {
-          success: true,
-          latencyMs: elapsed,
-          message: `Direct Groq API connection verified (${model}, ${elapsed}ms)`
-        };
-      }
-      const data = await groqRes.json();
-      return {
-        success: false,
-        message: data.error?.message || `API Error (${groqRes.status})`
-      };
-    } catch (err) {
-      return {
-        success: false,
-        message: `Network Error: ${err.message}`
-      };
+    const modelsToTest = model ? model.split(',').map(m => m.trim()) : [];
+    if (modelsToTest.length === 0) {
+      return { success: false, message: "No models provided to test" };
     }
+
+    let lastError = "";
+    for (const testModel of modelsToTest) {
+      const startTime = Date.now();
+      try {
+        const groqRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: testModel,
+            messages: [{ role: 'user', content: 'Ping test' }],
+            max_tokens: 5
+          })
+        });
+
+        const elapsed = Date.now() - startTime;
+        if (groqRes.ok) {
+          return {
+            success: true,
+            latencyMs: elapsed,
+            model_used: testModel,
+            message: `Direct OpenRouter API connection verified (${testModel}, ${elapsed}ms)`
+          };
+        }
+        const data = await groqRes.json().catch(() => ({}));
+        lastError = data.error?.message || `API Error (${groqRes.status})`;
+        continue;
+      } catch (err) {
+        lastError = `Network Error: ${err.message}`;
+        continue;
+      }
+    }
+    
+    return {
+      success: false,
+      message: `All models failed. Last error: ${lastError}`
+    };
   }
 
   async processQueryAsync(userQuery) {
@@ -143,9 +153,9 @@ class LoanChatbot {
           return llmResult;
         }
       } catch (err) {
-        console.warn('Groq LLM call failed, falling back to Local Rule Engine:', err);
+        console.warn('OpenRouter LLM call failed, falling back to Local Rule Engine:', err);
         const fallback = this.processLocalQuery(query);
-        fallback.warning = `Groq LLM Notice: ${err.message}. Showing verified results from 2026 Local Underwriting Engine.`;
+        fallback.warning = `OpenRouter LLM Notice: ${err.message}. Showing verified results from 2026 Local Underwriting Engine.`;
         return fallback;
       }
     }
@@ -173,8 +183,8 @@ class LoanChatbot {
         const data = await backendRes.json();
         return {
           text: data.text,
-          source: 'groq',
-          model: data.model || this.model,
+          source: 'openrouter',
+          model: data.model_used || data.model || this.model,
           language: this.language,
           quickActions: this.generateContextualQuickActions(userQuery)
         };
@@ -192,7 +202,7 @@ class LoanChatbot {
       console.log('Backend API route unavailable, trying direct Groq endpoint...', e);
     }
 
-    // 2. Direct Groq API call as fallback
+    // 2. Direct OpenRouter API call as fallback
     let systemPrompt = "";
     const langLower = (this.language || 'English').toLowerCase();
     
@@ -301,33 +311,50 @@ class LoanChatbot {
     }
     messages.push({ role: 'user', content: userQuery });
 
-    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: this.model,
-        messages: messages,
-        temperature: 0.2,
-        max_tokens: 500
-      })
-    });
-
-    if (!groqRes.ok) {
-      const errData = await groqRes.json().catch(() => ({}));
-      throw new Error(errData.error?.message || `Groq HTTP ${groqRes.status}`);
+    const modelsToTest = this.model ? this.model.split(',').map(m => m.trim()) : [];
+    if (modelsToTest.length === 0) {
+      throw new Error("No model provided for direct fallback fetch");
     }
 
-    const data = await groqRes.json();
-    const replyText = data.choices?.[0]?.message?.content || 'No response generated.';
-    return {
-      text: replyText,
-      source: 'groq',
-      model: this.model,
-      quickActions: this.generateContextualQuickActions(userQuery)
-    };
+    let lastError = "";
+    for (const testModel of modelsToTest) {
+      try {
+        const openRouterRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${this.apiKey}`,
+            'Content-Type': 'application/json',
+            'User-Agent': 'LoanMani-App'
+          },
+          body: JSON.stringify({
+            model: testModel,
+            messages: messages,
+            temperature: 0.2,
+            max_tokens: 500
+          })
+        });
+
+        if (openRouterRes.ok) {
+          const data = await openRouterRes.json();
+          const replyText = data.choices?.[0]?.message?.content || 'No response generated.';
+          return {
+            text: replyText,
+            source: 'openrouter',
+            model: testModel,
+            quickActions: this.generateContextualQuickActions(userQuery)
+          };
+        } else {
+          const errData = await openRouterRes.json().catch(() => ({}));
+          lastError = errData.error?.message || `API HTTP ${openRouterRes.status}`;
+          continue; // Try next model
+        }
+      } catch (err) {
+        lastError = `Network Error: ${err.message}`;
+        continue; // Try next model
+      }
+    }
+
+    throw new Error(`All direct models failed. Last error: ${lastError}`);
   }
 
   isLoanDomainQuery(q, userQuery) {

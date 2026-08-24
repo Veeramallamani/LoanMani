@@ -15,9 +15,10 @@ except ImportError:
 
 app = Flask(__name__, static_folder='.', static_url_path='')
 
-# Load Groq API Key and default model from environment variables (.env)
-DEFAULT_GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
-DEFAULT_MODEL = os.environ.get("GROQ_MODEL", "")
+# Load OpenRouter API Key and default models from environment variables (.env)
+DEFAULT_OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
+DEFAULT_MODELS_STR = os.environ.get("OPENROUTER_MODELS", "")
+DEFAULT_MODELS = [m.strip() for m in DEFAULT_MODELS_STR.split(",")] if DEFAULT_MODELS_STR else []
 
 # Supabase configuration
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
@@ -181,9 +182,9 @@ def health_check():
     return jsonify({
         "status": "online",
         "backend": "Python / Flask",
-        "groq_configured": bool(DEFAULT_GROQ_API_KEY),
-        "default_api_key": DEFAULT_GROQ_API_KEY,
-        "default_model": DEFAULT_MODEL
+        "openrouter_configured": bool(DEFAULT_OPENROUTER_API_KEY),
+        "default_api_key": DEFAULT_OPENROUTER_API_KEY,
+        "default_models": DEFAULT_MODELS
     })
 
 @app.route('/api/test-groq', methods=['POST'])
@@ -236,8 +237,8 @@ def test_groq_connection():
 def chat_endpoint():
     data = request.get_json() or {}
     user_query = data.get('query', '').strip()
-    api_key = data.get('apiKey', '').strip() or DEFAULT_GROQ_API_KEY
-    model = data.get('model', '').strip() or DEFAULT_MODEL
+    api_key = data.get('apiKey', '').strip() or DEFAULT_OPENROUTER_API_KEY
+    model = data.get('model', '').strip()
     chat_history = data.get('chatHistory', [])
     language = data.get('language', 'English').strip()
 
@@ -245,7 +246,7 @@ def chat_endpoint():
         return jsonify({"error": "Query parameter cannot be empty."}), 400
 
     if not api_key:
-        return jsonify({"error": "No Groq API key configured on backend or provided in request."}), 400
+        return jsonify({"error": "No OpenRouter API key configured on backend or provided in request."}), 400
 
     # Build prompt messages payload with dedicated single-language system prompt
     system_content = get_system_prompt_for_language(language)
@@ -259,61 +260,72 @@ def chat_endpoint():
 
     messages.append({"role": "user", "content": user_query})
 
-    payload = {
-        "model": model,
-        "messages": messages,
-        "temperature": 0.2,
-        "max_tokens": 500
-    }
+    models_to_test = [m.strip() for m in model.split(",")] if model else DEFAULT_MODELS
+    if not models_to_test:
+        return jsonify({"error": "No model provided or configured."}), 400
 
-    req = urllib.request.Request(
-        'https://openrouter.ai/api/v1/chat/completions',
-        headers={
-            'Authorization': f'Bearer {api_key}',
-            'Content-Type': 'application/json',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        },
-        data=json.dumps(payload).encode('utf-8')
-    )
+    last_error_msg = ""
+    for test_model in models_to_test:
+        payload = {
+            "model": test_model,
+            "messages": messages,
+            "temperature": 0.2,
+            "max_tokens": 500
+        }
 
-    try:
-        with urllib.request.urlopen(req, timeout=30) as response:
-            res_data = json.loads(response.read().decode('utf-8'))
-            reply_text = res_data.get('choices', [{}])[0].get('message', {}).get('content', '')
-            usage = res_data.get('usage', {})
+        req = urllib.request.Request(
+            'https://openrouter.ai/api/v1/chat/completions',
+            headers={
+                'Authorization': f'Bearer {api_key}',
+                'Content-Type': 'application/json',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            },
+            data=json.dumps(payload).encode('utf-8')
+        )
 
-            if supabase:
-                session_id = data.get('sessionId')
-                if session_id:
-                    try:
-                        updated_history = chat_history + [
-                            {"role": "user", "content": user_query},
-                            {"role": "assistant", "content": reply_text}
-                        ]
-                        supabase.table("chat_history").upsert({
-                            "session_id": session_id,
-                            "messages": updated_history
-                        }).execute()
-                    except Exception as e:
-                        print("Supabase chat logging error:", e)
-
-            return jsonify({
-                "text": reply_text,
-                "source": "openrouter",
-                "backend": "Python / Flask",
-                "model": model,
-                "usage": usage
-            })
-    except urllib.error.HTTPError as e:
-        err_body = e.read().decode('utf-8', errors='ignore')
         try:
-            err_json = json.loads(err_body)
-            err_msg = err_json.get('error', {}).get('message', f"HTTP {e.code}")
-        except Exception:
-            err_msg = f"HTTP {e.code} {e.reason}"
-        return jsonify({"error": f"Groq API Error: {err_msg}"}), 400
-    except Exception as e:
-        return jsonify({"error": f"Server Error: {str(e)}"}), 500
+            with urllib.request.urlopen(req, timeout=30) as response:
+                res_data = json.loads(response.read().decode('utf-8'))
+                reply_text = res_data.get('choices', [{}])[0].get('message', {}).get('content', '')
+                usage = res_data.get('usage', {})
+
+                if supabase:
+                    session_id = data.get('sessionId')
+                    if session_id:
+                        try:
+                            updated_history = chat_history + [
+                                {"role": "user", "content": user_query},
+                                {"role": "assistant", "content": reply_text}
+                            ]
+                            supabase.table("chat_history").upsert({
+                                "session_id": session_id,
+                                "messages": updated_history
+                            }).execute()
+                        except Exception as e:
+                            print("Supabase chat logging error:", e)
+
+                return jsonify({
+                    "text": reply_text,
+                    "source": "openrouter",
+                    "backend": "Python / Flask",
+                    "model_used": test_model,
+                    "usage": usage
+                })
+        except urllib.error.HTTPError as e:
+            err_body = e.read().decode('utf-8', errors='ignore')
+            try:
+                err_json = json.loads(err_body)
+                last_error_msg = err_json.get('error', {}).get('message', f"HTTP {e.code}")
+            except Exception:
+                last_error_msg = f"HTTP {e.code} {e.reason}"
+            print(f"Model {test_model} failed with: {last_error_msg}")
+            continue # Try next model
+        except Exception as e:
+            last_error_msg = str(e)
+            print(f"Model {test_model} failed with: {last_error_msg}")
+            continue # Try next model
+
+    return jsonify({"error": f"OpenRouter API Error: All models failed. Last error: {last_error_msg}"}), 400
 
 @app.route('/api/parse-document', methods=['POST'])
 def parse_document():
@@ -321,11 +333,11 @@ def parse_document():
         return jsonify({"error": "No document uploaded"}), 400
     
     file = request.files['document']
-    api_key = request.form.get('apiKey', '').strip() or DEFAULT_GROQ_API_KEY
-    model = request.form.get('model', '').strip() or DEFAULT_MODEL
+    api_key = request.form.get('apiKey', '').strip() or DEFAULT_OPENROUTER_API_KEY
+    model = request.form.get('model', '').strip()
     
     if not api_key:
-        return jsonify({"error": "No Groq API key configured"}), 400
+        return jsonify({"error": "No OpenRouter API key configured"}), 400
 
     filename = secure_filename(file.filename or "")
     text_content = ""
@@ -361,31 +373,53 @@ Document text:
 {text_content}
         """
         
-        payload = {
-            "model": model,
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.1,
-            "max_tokens": 500,
-            "response_format": {"type": "json_object"}
-        }
+        models_to_test = [m.strip() for m in model.split(",")] if model else DEFAULT_MODELS
+        if not models_to_test:
+            return jsonify({"error": "No OpenRouter model configured"}), 400
 
-        req = urllib.request.Request(
-            'https://api.groq.com/openai/v1/chat/completions',
-            headers={
-                'Authorization': f'Bearer {api_key}',
-                'Content-Type': 'application/json'
-            },
-            data=json.dumps(payload).encode('utf-8')
-        )
-        
-        with urllib.request.urlopen(req, timeout=30) as response:
-            res_data = json.loads(response.read().decode('utf-8'))
-            reply_text = res_data.get('choices', [{}])[0].get('message', {}).get('content', '')
-            parsed_json = json.loads(reply_text)
-            return jsonify({"success": True, "data": parsed_json})
+        last_error_msg = ""
+        for test_model in models_to_test:
+            payload = {
+                "model": test_model,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.1,
+                "max_tokens": 500,
+                "response_format": {"type": "json_object"}
+            }
+
+            req = urllib.request.Request(
+                'https://openrouter.ai/api/v1/chat/completions',
+                headers={
+                    'Authorization': f'Bearer {api_key}',
+                    'Content-Type': 'application/json'
+                },
+                data=json.dumps(payload).encode('utf-8')
+            )
             
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+            try:
+                with urllib.request.urlopen(req, timeout=30) as response:
+                    res_data = json.loads(response.read().decode('utf-8'))
+                    if 'choices' in res_data and len(res_data['choices']) > 0:
+                        content = res_data['choices'][0]['message']['content']
+                        parsed_json = json.loads(content)
+                        parsed_json['model_used'] = test_model
+                        return jsonify({"success": True, "data": parsed_json})
+                    else:
+                        last_error_msg = "Invalid format from API"
+                        continue
+            except urllib.error.HTTPError as e:
+                err_body = e.read().decode('utf-8', errors='ignore')
+                try:
+                    err_json = json.loads(err_body)
+                    last_error_msg = err_json.get('error', {}).get('message', f"HTTP {e.code}")
+                except Exception:
+                    last_error_msg = f"HTTP {e.code}"
+                continue
+            except Exception as e:
+                last_error_msg = str(e)
+                continue
+
+        return jsonify({"error": f"Failed to extract info from all models. Last error: {last_error_msg}"}), 500
 
 # -----------------------------
 # SUPABASE ENDPOINTS

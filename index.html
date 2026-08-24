@@ -90,7 +90,7 @@
       <div class="sidebar-footer">
         <div class="sidebar-footer-inner">
           <span class="sidebar-footer-label">LoanMani <span class="sidebar-footer-ver">v2.0</span></span>
-          <span class="sidebar-footer-model" id="sidebar-model-tag">gpt-oss-120b</span>
+          <span class="sidebar-footer-model" id="sidebar-model-tag">Multi-Model</span>
         </div>
       </div>
 
@@ -143,7 +143,7 @@
             </div>
 
             <div class="menu-section-divider"></div>
-            <button class="menu-item" id="menu-settings">⚙️ Groq API Settings</button>
+            <button class="menu-item" id="menu-settings">⚙️ OpenRouter API Settings</button>
             <button class="menu-item menu-item-danger" id="menu-clear">🗑️ Clear Chat</button>
           </div>
         </div>
@@ -555,46 +555,47 @@
 
   </div>
 
-  <!-- Groq API Settings Modal -->
-  <div class="modal-overlay" id="groq-modal">
+  <!-- OpenRouter API Settings Modal -->
+  <div class="modal-overlay" id="openrouter-modal">
     <div class="modal-card">
       <div class="modal-header">
-        <h3 class="modal-title">⚙️ Groq LLM API Settings</h3>
+        <h3 class="modal-title">⚙️ OpenRouter LLM API Settings</h3>
         <button class="modal-close" id="modal-close-btn">&times;</button>
       </div>
       <div class="modal-body">
         <div class="form-group">
           <label>Enable LLM Assistant</label>
           <label class="toggle-switch-label">
-            <input type="checkbox" id="groq-enable-toggle" checked>
+            <input type="checkbox" id="openrouter-enable-toggle" checked>
             <span class="toggle-slider"></span>
-            <span>Use Groq Cloud LLM (openai/gpt-oss-120b)</span>
+            <span>Use OpenRouter Cloud LLM (Auto-Fallback)</span>
           </label>
-          <p class="form-help">When enabled, responses use Groq LLM with dataset context. When disabled, the local analytics engine is used.</p>
+          <p class="form-help">When enabled, responses use OpenRouter LLM with dataset context. When disabled, the local analytics engine is used.</p>
         </div>
 
         <div class="form-group" style="display: none;">
-          <label for="groq-api-key-input">Groq API Key</label>
+          <label for="openrouter-api-key-input">OpenRouter API Key</label>
           <div class="input-with-toggle">
-            <input type="password" id="groq-api-key-input" class="form-input" placeholder="gsk_..." autocomplete="off">
+            <input type="password" id="openrouter-api-key-input" class="form-input" placeholder="gsk_..." autocomplete="off">
             <button type="button" class="toggle-pass-btn" id="toggle-key-visibility" title="Toggle Visibility">👁️</button>
           </div>
           <p class="form-help">Key is loaded from <code>.env</code> file.</p>
         </div>
 
         <div class="form-group">
-          <label for="groq-model-select">LLM Model</label>
-          <select id="groq-model-select" class="form-select">
-            <option value="openai/gpt-oss-120b" selected>openai/gpt-oss-120b (Custom Model)</option>
-            <option value="llama-3.1-8b-instant">llama-3.1-8b-instant (Fastest Speed)</option>
-            <option value="mixtral-8x7b-32768">mixtral-8x7b-32768 (High Context)</option>
-            <option value="gemma2-9b-it">gemma2-9b-it (Google Gemma 2)</option>
+          <label for="openrouter-model-select">LLM Model</label>
+          <select id="openrouter-model-select" class="form-select">
+            <option value="qwen/qwen-2.5-72b-instruct,google/gemini-flash-1.5,meta-llama/llama-3.1-8b-instruct" selected>Qwen -> Gemini -> Llama (Auto-Fallback)</option>
+            <option value="openai/gpt-oss-120b">openai/gpt-oss-120b (Custom Model)</option>
+            <option value="meta-llama/llama-3.1-8b-instruct">llama-3.1-8b-instruct (Fastest Speed)</option>
+            <option value="mistralai/mixtral-8x7b-instruct">mixtral-8x7b (High Context)</option>
+            <option value="google/gemma-2-9b-it">gemma-2-9b-it (Google Gemma 2)</option>
           </select>
         </div>
 
         <div class="form-group">
-          <label for="groq-language-select">Response Language / భాష / भाषा</label>
-          <select id="groq-language-select" class="form-select">
+          <label for="openrouter-language-select">Response Language / భాష / भाषा</label>
+          <select id="openrouter-language-select" class="form-select">
             <option value="English" selected>🇬🇧 English (Simple Everyday Words)</option>
             <option value="Hindi">🇮🇳 हिन्दी - Hindi (सरल हिन्दी)</option>
             <option value="Telugu">🇮🇳 తెలుగు - Telugu (సరళమైన తెలుగు)</option>
@@ -605,7 +606,7 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn-secondary" id="test-connection-btn">⚡ Test Connection</button>
-        <button type="button" class="btn-primary" id="save-groq-settings-btn">Save Settings</button>
+        <button type="button" class="btn-primary" id="save-openrouter-settings-btn">Save Settings</button>
       </div>
     </div>
   </div>
@@ -735,7 +736,7 @@
 
       document.getElementById('menu-settings')?.addEventListener('click', () => {
         closeMobileSidebar();
-        openGroqModal();
+        openOpenRouterModal();
       });
       document.getElementById('menu-clear')?.addEventListener('click', () => {
         closeMobileSidebar();
@@ -773,7 +774,7 @@
       const langCurrentLabel = document.getElementById('lang-current-label');
       const langOptionBtns = document.querySelectorAll('.lang-option-btn');
       const mobileLangBtns = document.querySelectorAll('.mobile-lang-btn');
-      const groqLanguageSelect = document.getElementById('groq-language-select');
+      const openrouterLanguageSelect = document.getElementById('openrouter-language-select');
 
       function applyLanguage(lang) {
         bot.setLanguage(lang);
@@ -795,7 +796,7 @@
         mobileLangBtns.forEach(btn => {
           btn.classList.toggle('active', btn.dataset.lang === lang);
         });
-        if (groqLanguageSelect) groqLanguageSelect.value = lang;
+        if (openrouterLanguageSelect) openrouterLanguageSelect.value = lang;
 
         if (langDropdownMenu) langDropdownMenu.classList.remove('active');
       }
@@ -1070,32 +1071,32 @@
         });
       }
 
-      // Groq Modal UI Elements
-      const groqBadge = document.getElementById('groq-badge'); // may be null (removed)
+      // OpenRouter Modal UI Elements
+      const openrouterBadge = document.getElementById('openrouter-badge'); // may be null (removed)
       const sidebarSettingsBtn = document.getElementById('sidebar-settings-btn');
       const settingsBtnTop = document.getElementById('sidebar-settings-btn-top');
-      const groqModal = document.getElementById('groq-modal');
+      const openrouterModal = document.getElementById('openrouter-modal');
       const modalCloseBtn = document.getElementById('modal-close-btn');
-      const apiKeyInput = document.getElementById('groq-api-key-input');
+      const apiKeyInput = document.getElementById('openrouter-api-key-input');
       const toggleKeyVisibilityBtn = document.getElementById('toggle-key-visibility');
-      const modelSelect = document.getElementById('groq-model-select');
-      const enableToggle = document.getElementById('groq-enable-toggle');
+      const modelSelect = document.getElementById('openrouter-model-select');
+      const enableToggle = document.getElementById('openrouter-enable-toggle');
       const testConnectionBtn = document.getElementById('test-connection-btn');
-      const saveSettingsBtn = document.getElementById('save-groq-settings-btn');
+      const saveSettingsBtn = document.getElementById('save-openrouter-settings-btn');
       const testResultBox = document.getElementById('test-connection-result');
-      const groqBadgeText = document.getElementById('groq-badge-text'); // may be null (removed)
-      const groqModelTag = document.getElementById('groq-model-tag');   // may be null (removed)
+      const openrouterBadgeText = document.getElementById('openrouter-badge-text'); // may be null (removed)
+      const openrouterModelTag = document.getElementById('openrouter-model-tag');   // may be null (removed)
 
       function updateHeaderBadgeUI() {
-        if (groqBadge) {
+        if (openrouterBadge) {
           if (bot.useLLM) {
-            groqBadge.classList.remove('disabled');
+            openrouterBadge.classList.remove('disabled');
           } else {
-            groqBadge.classList.add('disabled');
+            openrouterBadge.classList.add('disabled');
           }
         }
-        if (groqBadgeText) groqBadgeText.textContent = (bot.useLLM) ? 'Groq Active' : 'Local Mode';
-        if (groqModelTag) groqModelTag.textContent = bot.model.split('/')[0].replace('z-ai/glm-5.2:free', 'z-ai/glm-5.2:free').replace('qwen-3.6-27b', 'qwen-3.6-27b');
+        if (openrouterBadgeText) openrouterBadgeText.textContent = (bot.useLLM) ? 'OpenRouter Active' : 'Local Mode';
+        if (openrouterModelTag) openrouterModelTag.textContent = bot.model.split('/')[0].replace('z-ai/glm-5.2:free', 'z-ai/glm-5.2:free').replace('qwen-3.6-27b', 'qwen-3.6-27b');
       }
 
       apiKeyInput.value = bot.apiKey;
@@ -1106,26 +1107,26 @@
       renderChatHistoryUI();
       resetChat(); // Explicitly start with a new chat on refresh
 
-      function openGroqModal() {
+      function openOpenRouterModal() {
         apiKeyInput.value = bot.apiKey;
         modelSelect.value = bot.model;
         enableToggle.checked = bot.useLLM;
-        if (groqLanguageSelect) groqLanguageSelect.value = bot.language;
+        if (openrouterLanguageSelect) openrouterLanguageSelect.value = bot.language;
         testResultBox.style.display = 'none';
-        groqModal.classList.add('active');
+        openrouterModal.classList.add('active');
       }
 
-      if (groqBadge) groqBadge.addEventListener('click', openGroqModal);
-      if (sidebarSettingsBtn) sidebarSettingsBtn.addEventListener('click', openGroqModal);
-      if (settingsBtnTop) settingsBtnTop.addEventListener('click', openGroqModal);
+      if (openrouterBadge) openrouterBadge.addEventListener('click', openOpenRouterModal);
+      if (sidebarSettingsBtn) sidebarSettingsBtn.addEventListener('click', openOpenRouterModal);
+      if (settingsBtnTop) settingsBtnTop.addEventListener('click', openOpenRouterModal);
 
 
       modalCloseBtn.addEventListener('click', () => {
-        groqModal.classList.remove('active');
+        openrouterModal.classList.remove('active');
       });
 
-      groqModal.addEventListener('click', (e) => {
-        if (e.target === groqModal) groqModal.classList.remove('active');
+      openrouterModal.addEventListener('click', (e) => {
+        if (e.target === openrouterModal) openrouterModal.classList.remove('active');
       });
 
       toggleKeyVisibilityBtn.addEventListener('click', () => {
@@ -1143,7 +1144,7 @@
         testConnectionBtn.textContent = 'Testing...';
         testResultBox.style.display = 'flex';
         testResultBox.className = 'connection-status-box';
-        testResultBox.innerHTML = '<span>⏳ Connecting to Groq API...</span>';
+        testResultBox.innerHTML = '<span>⏳ Connecting to OpenRouter API...</span>';
 
         const res = await bot.testConnection(apiKeyInput.value, modelSelect.value);
         testConnectionBtn.disabled = false;
@@ -1159,14 +1160,14 @@
       });
 
       saveSettingsBtn.addEventListener('click', () => {
-        const selectedLang = groqLanguageSelect ? groqLanguageSelect.value : bot.language;
+        const selectedLang = openrouterLanguageSelect ? openrouterLanguageSelect.value : bot.language;
         bot.updateSettings(apiKeyInput.value, modelSelect.value, enableToggle.checked, selectedLang);
         applyLanguage(selectedLang);
         updateHeaderBadgeUI();
-        groqModal.classList.remove('active');
+        openrouterModal.classList.remove('active');
       });
 
-      // Send Chat Message (Async Groq LLM + Fallback)
+      // Send Chat Message (Async OpenRouter LLM + Fallback)
       async function sendChatMessage(text) {
         if (!text || !text.trim()) return;
         const userQuery = text.trim();
