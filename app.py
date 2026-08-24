@@ -187,51 +187,61 @@ def health_check():
         "default_models": DEFAULT_MODELS
     })
 
-@app.route('/api/test-groq', methods=['POST'])
-def test_groq_connection():
+@app.route('/api/test-openrouter', methods=['POST'])
+def test_openrouter_connection():
     data = request.get_json() or {}
-    api_key = data.get('apiKey', '').strip() or DEFAULT_GROQ_API_KEY
-    model = data.get('model', '').strip() or DEFAULT_MODEL
+    api_key = data.get('apiKey', '').strip() or DEFAULT_OPENROUTER_API_KEY
+    model = data.get('model', '').strip()
 
     if not api_key:
-        return jsonify({"success": False, "message": "No Groq API Key provided."}), 400
+        return jsonify({"success": False, "message": "No OpenRouter API Key provided."}), 400
 
-    start_time = time.time()
-    payload = {
-        "model": model,
-        "messages": [{"role": "user", "content": "Ping test"}],
-        "max_tokens": 10
-    }
+    models_to_test = [m.strip() for m in model.split(",")] if model else DEFAULT_MODELS
+    if not models_to_test:
+        return jsonify({"success": False, "message": "No OpenRouter models provided."}), 400
 
-    req = urllib.request.Request(
-        'https://api.groq.com/openai/v1/chat/completions',
-        headers={
-            'Authorization': f'Bearer {api_key}',
-            'Content-Type': 'application/json',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        },
-        data=json.dumps(payload).encode('utf-8')
-    )
+    last_error_msg = ""
+    for test_model in models_to_test:
+        start_time = time.time()
+        payload = {
+            "model": test_model,
+            "messages": [{"role": "user", "content": "Hi"}],
+            "max_tokens": 10
+        }
 
-    try:
-        with urllib.request.urlopen(req, timeout=10) as response:
-            res_data = json.loads(response.read().decode('utf-8'))
-            latency = int((time.time() - start_time) * 1000)
-            return jsonify({
-                "success": True,
-                "latencyMs": latency,
-                "message": f"Groq API connection verified via backend ({model}, {latency}ms)"
-            })
-    except urllib.error.HTTPError as e:
-        err_body = e.read().decode('utf-8', errors='ignore')
+        req = urllib.request.Request(
+            'https://openrouter.ai/api/v1/chat/completions',
+            headers={
+                'Authorization': f'Bearer {api_key}',
+                'Content-Type': 'application/json',
+                'User-Agent': 'LoanMani-App'
+            },
+            data=json.dumps(payload).encode('utf-8')
+        )
+
         try:
-            err_json = json.loads(err_body)
-            msg = err_json.get('error', {}).get('message', f"HTTP {e.code}")
-        except Exception:
-            msg = f"HTTP {e.code} {e.reason}"
-        return jsonify({"success": False, "message": f"Groq API Error: {msg}"}), 400
-    except Exception as e:
-        return jsonify({"success": False, "message": f"Network Error: {str(e)}"}), 500
+            with urllib.request.urlopen(req, timeout=10) as response:
+                res_data = json.loads(response.read().decode('utf-8'))
+                latency = int((time.time() - start_time) * 1000)
+                return jsonify({
+                    "success": True,
+                    "latencyMs": latency,
+                    "model_used": test_model,
+                    "message": f"OpenRouter API connection verified via backend ({test_model}, {latency}ms)"
+                })
+        except urllib.error.HTTPError as e:
+            err_body = e.read().decode('utf-8', errors='ignore')
+            try:
+                err_json = json.loads(err_body)
+                last_error_msg = err_json.get('error', {}).get('message', f"HTTP {e.code}")
+            except Exception:
+                last_error_msg = f"HTTP {e.code} {e.reason}"
+            continue # Try next model
+        except Exception as e:
+            last_error_msg = str(e)
+            continue # Try next model
+
+    return jsonify({"success": False, "message": f"OpenRouter API Error: All fallback models failed. Last error: {last_error_msg}"}), 400
 
 @app.route('/api/chat', methods=['POST'])
 def chat_endpoint():
@@ -420,6 +430,9 @@ Document text:
                 continue
 
         return jsonify({"error": f"Failed to extract info from all models. Last error: {last_error_msg}"}), 500
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # -----------------------------
 # SUPABASE ENDPOINTS
