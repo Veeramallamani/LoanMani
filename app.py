@@ -1,5 +1,6 @@
 import os
 import time
+import threading
 import json
 import urllib.request
 import urllib.error
@@ -23,6 +24,7 @@ DEFAULT_MODELS = [m.strip() for m in DEFAULT_MODELS_STR.split(",")] if DEFAULT_M
 # Supabase configuration
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
 SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+RENDER_DEPLOY_URL = os.environ.get("RENDER_DEPLOY_URL", "")
 
 supabase = None
 if SUPABASE_URL and SUPABASE_KEY:
@@ -495,6 +497,25 @@ def submit_loan():
         return jsonify({"success": True, "data": res.data})
     except Exception as e:
         return jsonify({"error": str(e)}), 400
+
+# -----------------------------
+# AUTO-PING TO PREVENT RENDER COLD START
+# -----------------------------
+def ping_self():
+    while True:
+        try:
+            if RENDER_DEPLOY_URL:
+                ping_url = f"{RENDER_DEPLOY_URL.rstrip('/')}/api/health"
+                req = urllib.request.Request(ping_url)
+                with urllib.request.urlopen(req, timeout=10) as response:
+                    pass
+                print(f"Auto-ping sent to {ping_url}")
+        except Exception as e:
+            print(f"Auto-ping failed: {e}")
+        time.sleep(600)  # 10 minutes (600 seconds)
+
+ping_thread = threading.Thread(target=ping_self, daemon=True)
+ping_thread.start()
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

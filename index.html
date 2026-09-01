@@ -35,7 +35,6 @@
       <div class="sidebar-header">
         <div class="sidebar-brand">
           <div class="sidebar-brand-icon">
-            <img src="robot_mascot.png" alt="AI Mascot" class="brand-mascot-img" onerror="this.style.display='none';">
             <span class="brand-fallback-emoji">🤖</span>
           </div>
           <span class="sidebar-brand-title">LoanMani</span>
@@ -199,7 +198,7 @@
             <div class="speaking-mascot-container">
               <div class="mascot-ripple-ring ring-1"></div>
               <div class="mascot-ripple-ring ring-2"></div>
-              <img src="robot_mascot.png" alt="3D Robot" class="speaking-mascot-img">
+              <div class="speaking-mascot-img" style="font-size: 80px; display: flex; align-items: center; justify-content: center;">🤖</div>
             </div>
 
             <!-- Animated Spoken Query Caption -->
@@ -951,7 +950,7 @@
 
               botDiv.innerHTML = `
                 <div class="chat-avatar">
-                  <img src="robot_mascot.png" alt="Bot" class="avatar-mascot-img" onerror="this.src=''; this.innerHTML='🤖';">
+                  🤖
                 </div>
                 <div class="message-bubble">
                   ${htmlContent}
@@ -1194,7 +1193,7 @@
         typingDiv.className = 'chat-message assistant typing-indicator-msg';
         typingDiv.innerHTML = `
           <div class="chat-avatar">
-            <img src="robot_mascot.png" alt="Bot" class="avatar-mascot-img" onerror="this.src=''; this.innerHTML='🤖';">
+            🤖
           </div>
           <div class="message-bubble typing-bubble">
             <div class="typing-dots">
