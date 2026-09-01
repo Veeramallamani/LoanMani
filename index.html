@@ -946,6 +946,10 @@
                 htmlContent = '<p>' + escapeHtml(msg.content).replace(/\n/g, '<br>') + '</p>';
               }
               
+              if (msg.warning) {
+                htmlContent = '<div style="color: var(--warning-color); font-size: 0.85rem; margin-bottom: 8px; font-weight: bold;">' + escapeHtml(msg.warning) + '</div>' + htmlContent;
+              }
+
               htmlContent = checkAndInjectBorrowerForm(htmlContent, true);
 
               botDiv.innerHTML = `
@@ -1021,6 +1025,7 @@
         session.messages.push({
           role: 'assistant',
           content: botResponse.text,
+          warning: botResponse.warning,
           source: botResponse.source,
           model: botResponse.model,
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
