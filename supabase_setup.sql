@@ -55,10 +55,31 @@ create policy "Users can update own chat history." on chat_history for update us
 -- ALTER TABLE public.chat_history ADD CONSTRAINT chat_history_session_id_key UNIQUE (session_id);
 -- CREATE INDEX IF NOT EXISTS idx_chat_history_session_id ON public.chat_history(session_id);
 
--- 5. Set up Supabase Storage for Documents
-insert into storage.buckets (id, name, public) values ('documents', 'documents', false);
-create policy "Users can upload own documents" on storage.objects for insert with check ( bucket_id = 'documents' and auth.uid() = owner );
-create policy "Users can view own documents" on storage.objects for select using ( bucket_id = 'documents' and auth.uid() = owner );
+-- 5. Knowledge Base Storage Bucket
+-- For storing admin-uploaded reference files (PDFs, DOCX, etc.)
+-- Customer documents are NOT stored — they are read in-memory only.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'knowledge_base',
+  'knowledge_base',
+  false,                            -- private: never publicly accessible
+  52428800,                         -- 50 MB per file limit
+  array[
+    'application/pdf',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/msword',
+    'text/plain',
+    'text/csv',
+    'application/json'
+  ]
+);
+
+-- Only service-role (admin) can upload knowledge base files
+-- No user-level insert/delete policies — managed via Supabase dashboard or backend only
+create policy "Service role can manage knowledge base files"
+  on storage.objects for all
+  using ( bucket_id = 'knowledge_base' )
+  with check ( bucket_id = 'knowledge_base' );
 
 -- 6. (Optional) Example Vector table for Document Embeddings
 create table public.document_embeddings (

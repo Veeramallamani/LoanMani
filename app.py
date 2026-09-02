@@ -375,15 +375,7 @@ def parse_document():
 
     filename = secure_filename(file.filename or "")
     text_content = ""
-    
-    if supabase and filename:
-        try:
-            file.seek(0)
-            file_bytes = file.read()
-            supabase.storage.from_("documents").upload(filename, file_bytes)
-            file.seek(0)
-        except Exception as e:
-            print("Supabase storage upload error:", e)
+    # Customer documents are intentionally NOT stored — read in-memory only
 
     try:
         if filename.lower().endswith('.pdf'):
