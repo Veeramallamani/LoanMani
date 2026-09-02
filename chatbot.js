@@ -13,6 +13,12 @@ class LoanChatbot {
     this.language = localStorage.getItem('loan_chat_language') || 'English';
     this.chatHistory = [];
 
+    // Generate a stable session ID per browser tab (persists on refresh, resets on new tab)
+    if (!sessionStorage.getItem('loan_session_id')) {
+      sessionStorage.setItem('loan_session_id', 'sess_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9));
+    }
+    this.sessionId = sessionStorage.getItem('loan_session_id');
+
     // Attempt to auto-fetch backend default API key if missing locally
     this.initBackendSettings();
   }
@@ -175,7 +181,8 @@ class LoanChatbot {
           apiKey: this.apiKey || undefined,
           model: this.model,
           language: this.language,
-          chatHistory: this.chatHistory.slice(-8)
+          chatHistory: this.chatHistory.slice(-8),
+          sessionId: this.sessionId  // required for Supabase chat_history saving
         })
       });
 

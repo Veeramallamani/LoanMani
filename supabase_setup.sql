@@ -37,14 +37,23 @@ create policy "Users can insert own loan applications." on loan_applications for
 create table public.chat_history (
   id uuid default uuid_generate_v4() primary key,
   user_id uuid references public.profiles(id),
-  session_id text not null,
+  session_id text not null unique,           -- UNIQUE required for upsert ON CONFLICT
   messages jsonb not null default '[]'::jsonb,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+-- Index for fast lookup by user and session
+create index if not exists idx_chat_history_session_id on public.chat_history(session_id);
+create index if not exists idx_chat_history_user_id on public.chat_history(user_id);
 alter table public.chat_history enable row level security;
 create policy "Users can view own chat history." on chat_history for select using (auth.uid() = user_id);
 create policy "Users can insert own chat history." on chat_history for insert with check (auth.uid() = user_id);
 create policy "Users can update own chat history." on chat_history for update using (auth.uid() = user_id);
+
+-- If the table already exists, run these ALTER statements instead:
+-- ALTER TABLE public.chat_history ADD COLUMN IF NOT EXISTS updated_at timestamp with time zone default now();
+-- ALTER TABLE public.chat_history ADD CONSTRAINT chat_history_session_id_key UNIQUE (session_id);
+-- CREATE INDEX IF NOT EXISTS idx_chat_history_session_id ON public.chat_history(session_id);
 
 -- 5. Set up Supabase Storage for Documents
 insert into storage.buckets (id, name, public) values ('documents', 'documents', false);

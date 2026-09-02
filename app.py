@@ -4,6 +4,7 @@ import threading
 import json
 import urllib.request
 import urllib.error
+from typing import cast as _cast
 from flask import Flask, request, jsonify, send_from_directory
 import PyPDF2
 from werkzeug.utils import secure_filename
@@ -309,12 +310,33 @@ def chat_endpoint():
                                 {"role": "user", "content": user_query},
                                 {"role": "assistant", "content": reply_text}
                             ]
-                            supabase.table("chat_history").upsert({
-                                "session_id": session_id,
-                                "messages": updated_history
-                            }).execute()
+                            # Trim to last 50 messages to keep DB rows small
+                            updated_history = updated_history[-50:]
+                            messages_json = json.dumps(updated_history)
+
+                            # Select-first approach: works without UNIQUE constraint on session_id
+                            existing = supabase.table("chat_history") \
+                                .select("id") \
+                                .eq("session_id", session_id) \
+                                .limit(1) \
+                                .execute()
+
+                            existing_rows = _cast(list[dict], existing.data or [])
+                            if existing_rows:
+                                # Row exists — update it
+                                row_id = existing_rows[0]["id"]
+                                supabase.table("chat_history") \
+                                    .update({"messages": messages_json}) \
+                                    .eq("id", row_id) \
+                                    .execute()
+                            else:
+                                # No row yet — insert a fresh one
+                                supabase.table("chat_history").insert({
+                                    "session_id": session_id,
+                                    "messages": messages_json
+                                }).execute()
                         except Exception as e:
-                            print("Supabase chat logging error:", e)
+                            print("Supabase chat logging error:", repr(e))
 
                 return jsonify({
                     "text": reply_text,
